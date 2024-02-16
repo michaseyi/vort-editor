@@ -1,17 +1,24 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "@/app/globals.css"
+import { Inter, JetBrains_Mono, Open_Sans, Montserrat, Lato } from "next/font/google"
 
-const inter = Inter({ subsets: ["latin"] })
+import "@/app/globals.css"
+import Script from "next/script"
+
+const inter = Inter({ subsets: ["cyrillic"] })
+const jetbrains = JetBrains_Mono({ subsets: ["latin"] })
+const lato = Lato({ subsets: ["latin"], weight: ["400", "300", "700", "900"] })
 
 export const metadata: Metadata = {
-	title: "Editor",
+	title: "Vort",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
-			<body className={inter.className}>{children}</body>
+		<html lang="en" className="">
+			<head>
+				<Script src="/Vort.js" strategy="beforeInteractive" />
+			</head>
+			<body className={jetbrains.className}>{children}</body>
 		</html>
 	)
 }

@@ -1,98 +1,61 @@
 "use client"
-import {
-	Canvas,
-	VortECSProvider,
-	useInstance,
-	useEntityComponent,
-	Position,
-	Velocity,
-	useLoadingState,
-} from "@/vort-ecs-connector"
-import { useEffect, useRef, useState } from "react"
+import { ViewGizmos } from "@/components/ViewGizmos"
+import { BoundingBoxSelector } from "@/components/BoundingBoxSelector"
+import { RenderWindow, VortECSProvider, useVortState } from "@/vort-ecs-connector"
+import { useMediaQuery } from "../../hooks/useMediaQuery"
+import { EntityGraph } from "@/components/EntityGraph"
+import { VectorInput } from "@/components/VectorInput"
 
-function EditorPage() {
-	const { isInitialized, initializationStage } = useLoadingState()
-
-	const { position, velocity, set } = useEntityComponent(1, {
-		position: {
-			type: Position,
-		},
-		velocity: { type: Velocity },
-	})
-
-	console.log(position, velocity, set)
-
-	useEffect(() => {
-		set({
-			position: { x: 2 },
-		})
-	}, [])
-	return (
-		<>
-			{!isInitialized && (
-				<div className="fixed top-0 left-0 w-screen h-screen z-10 grid place-items-center bg-black">
-					{initializationStage}
-				</div>
-			)}
-			<Canvas className="w-screen h-screen" />
-
-			<aside className="absolute overflow-hidden top-0 left-0 h-screen bg-black min-w-60 pl-4 py-2">
-				<SceneGraph />
-			</aside>
-		</>
-	)
-}
-
-type SceneEntityProps = {
-	root?: boolean
-}
-
-function SceneEntity({ root = false }: SceneEntityProps) {
-	const [children, setChildren] = useState<number[]>([1, 2, 3, 4, 5, 6])
-	const [expanded, setExpanded] = useState(false)
-	return (
-		<section>
-			<div
-				onClick={() => {
-					setExpanded((prev) => !prev)
-				}}
-				className="cursor-pointer relative"
-			>
-				entity
-				{!root && <span className="absolute top-[50%] right-[100%] w-3 h-[1px] bg-white"></span>}
-			</div>
-
-			<div className="pl-4 relative">
-				{expanded && children.map((entityId) => <SceneEntity key={entityId} />)}
-
-				{expanded && (
-					<span className="absolute bottom-3 left-1 block h-[calc(100%-7px)] w-[1px] bg-white"></span>
-				)}
-			</div>
-		</section>
-	)
-}
-
-function SceneGraph() {
-	const scenes = [1, 2, 3]
-
-	return (
-		<>
-			<search>
-				<input type="text" id="entitySearchInput" className="bg-gray-900" />
-			</search>
-			<div className="overflow-auto h-full no-scrollbar">
-				{scenes.map((entityId) => (
-					<SceneEntity key={entityId} root={true} />
-				))}
-			</div>
-		</>
-	)
-}
-export default () => {
+export default function EditorPageWrapper() {
 	return (
 		<VortECSProvider>
 			<EditorPage />
 		</VortECSProvider>
+	)
+}
+
+function EditorPage() {
+	const isDesktop = useMediaQuery("(min-width: 768px)")
+
+	return (
+		<div className="flex flex-col h-screen divide-y divide-[#444]">
+			<TopPanel />
+			<div className="flex-1 flex divide-x divide-[#444] min-h-0">
+				{/* {isDesktop && <LeftPanel />} */}
+
+				<BoundingBoxSelector
+					className="flex-1 relative"
+					showHelperBox={true}
+					onBoxAvailable={(box) => {
+						console.log(box)
+					}}
+				>
+					<RenderWindow className="bg-black w-full h-full " />
+					<ViewGizmos className="absolute top-5 right-6" />
+				</BoundingBoxSelector>
+
+				{/* {isDesktop && <RightPanel />} */}
+			</div>
+		</div>
+	)
+}
+
+function RightPanel() {
+	return (
+		<section className="bg-[#2c2c2c] min-w-60 divide-y divide-[#444]">
+			<VectorInput<2> size={2} value={{ x: 0, y: 0 }} />
+		</section>
+	)
+}
+function TopPanel() {
+	return <header className="min-h-12 bg-[#2c2c2c]"></header>
+}
+
+function LeftPanel() {
+	const { isInitialized } = useVortState()
+	return (
+		<section className="bg-[#2c2c2c] min-w-60 divide-y divide-[#444]">
+			{isInitialized && <EntityGraph />}
+		</section>
 	)
 }
