@@ -91,31 +91,37 @@ export function ViewGizmos({ className }: ViewGizmosProps) {
 		console.log("setting view to", axis)
 	}
 
-	const [capturePointer, setCapturePointer] = useState(false)
+	const capturePointer = useRef(false)
 
 	return (
 		<div
 			onPointerDown={(e) => {
 				e.stopPropagation()
-				setCapturePointer(true)
+				capturePointer.current = true
 			}}
 			onPointerMove={(e) => {
-				if (capturePointer) {
-					if (document.pointerLockElement !== e.currentTarget) {
-						e.currentTarget.requestPointerLock()
-					}
-					const { movementX, movementY } = e
-
-					instance.editorCameraRotate(-movementY, -movementX)
+				if (!capturePointer.current) {
+					return
 				}
+
+				if (document.pointerLockElement !== e.currentTarget) {
+					e.currentTarget.requestPointerLock()
+				}
+				const { movementX, movementY } = e
+
+				instance.editorRotateCamera(-movementY, -movementX)
 			}}
 			onPointerUp={(e) => {
+				capturePointer.current = false
 				document.exitPointerLock()
-				setCapturePointer(false)
+			}}
+			onPointerLeave={(e) => {
+				capturePointer.current = false
+				document.exitPointerLock()
 			}}
 			className={cn(
 				className,
-				"select-none hover:bg-gray-400/50 hover:shadow-extend shadow-gray-400/50 w-16 h-16 rounded-full transition-[box-shadow,background-color]"
+				"select-none hover:bg-gray-400/50 hover:shadow-extend shadow-gray-400/50 w-16 h-16 rounded-full transition-[box-shadow,background-color] relative"
 			)}
 		>
 			<ViewGizmosAxisLines positions={positions} />

@@ -766,7 +766,7 @@ function createWasm() {
     
 
     wasmMemory = wasmExports['memory'];
-    
+    Module['wasmMemory'] = wasmMemory;
     assert(wasmMemory, "memory not found in wasm exports");
     // This assertion doesn't hold when emscripten is run in --post-link
     // mode.
@@ -7185,6 +7185,7 @@ function _getMainCanvasSize(width,height) { const canvas = document.querySelecto
 
 
 
+
 embind_init_charCodes();
 BindingError = Module['BindingError'] = class BindingError extends Error { constructor(message) { super(message); this.name = 'BindingError'; }};
 InternalError = Module['InternalError'] = class InternalError extends Error { constructor(message) { super(message); this.name = 'InternalError'; }};
@@ -7445,10 +7446,11 @@ var dynCall_vidd = Module['dynCall_vidd'] = createExportWrapper('dynCall_vidd');
 var dynCall_viiii = Module['dynCall_viiii'] = createExportWrapper('dynCall_viiii');
 var dynCall_vif = Module['dynCall_vif'] = createExportWrapper('dynCall_vif');
 var dynCall_viijii = Module['dynCall_viijii'] = createExportWrapper('dynCall_viijii');
-var dynCall_vf = Module['dynCall_vf'] = createExportWrapper('dynCall_vf');
-var dynCall_vff = Module['dynCall_vff'] = createExportWrapper('dynCall_vff');
-var dynCall_viff = Module['dynCall_viff'] = createExportWrapper('dynCall_viff');
 var dynCall_i = Module['dynCall_i'] = createExportWrapper('dynCall_i');
+var dynCall_vfff = Module['dynCall_vfff'] = createExportWrapper('dynCall_vfff');
+var dynCall_vff = Module['dynCall_vff'] = createExportWrapper('dynCall_vff');
+var dynCall_vifff = Module['dynCall_vifff'] = createExportWrapper('dynCall_vifff');
+var dynCall_viff = Module['dynCall_viff'] = createExportWrapper('dynCall_viff');
 var dynCall_iiiii = Module['dynCall_iiiii'] = createExportWrapper('dynCall_iiiii');
 var dynCall_iiiiii = Module['dynCall_iiiiii'] = createExportWrapper('dynCall_iiiiii');
 var dynCall_viiiiii = Module['dynCall_viiiiii'] = createExportWrapper('dynCall_viiiiii');
@@ -7465,13 +7467,15 @@ var _asyncify_start_unwind = createExportWrapper('asyncify_start_unwind');
 var _asyncify_stop_unwind = createExportWrapper('asyncify_stop_unwind');
 var _asyncify_start_rewind = createExportWrapper('asyncify_start_rewind');
 var _asyncify_stop_rewind = createExportWrapper('asyncify_stop_rewind');
-var ___start_em_js = Module['___start_em_js'] = 120892;
-var ___stop_em_js = Module['___stop_em_js'] = 121571;
+var ___start_em_js = Module['___start_em_js'] = 122588;
+var ___stop_em_js = Module['___stop_em_js'] = 123267;
 
 // include: postamble.js
 // === Auto-generated postamble setup entry stuff ===
 
+Module['wasmMemory'] = wasmMemory;
 Module['UTF8ToString'] = UTF8ToString;
+Module['Asyncify'] = Asyncify;
 var missingLibrarySymbols = [
   'writeI53ToI64',
   'writeI53ToI64Clamped',
@@ -7639,7 +7643,6 @@ var unexportedSymbols = [
   'err',
   'callMain',
   'abort',
-  'wasmMemory',
   'wasmExports',
   'stackAlloc',
   'stackSave',
@@ -7745,7 +7748,6 @@ var unexportedSymbols = [
   'GLEW',
   'IDBStore',
   'runAndAbortIfError',
-  'Asyncify',
   'Fibers',
   'SDL',
   'SDL_gfx',

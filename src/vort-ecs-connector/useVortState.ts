@@ -1,26 +1,28 @@
 import { useEffect, useReducer, useState } from "react"
-import { ECSEvent, useInstance } from "."
+import { AppState, ECSEvent, useInstance } from "."
 
-export function useVortState() {
-	const { addEventListener, removeEventListener } = useInstance()
+export function useVortState(): AppState {
+	const instance = useInstance()
 
-	const [isInitialized, setIsInitialized] = useState(false)
-
-	const [initializationStage, setInitializationStage] = useState("Initializing Wasm Module.")
+	const [appState, setAppState] = useState(() => instance.globalGetAppState())
 
 	useEffect(() => {
-		function onRuntimeInitializedCallback({ initialized }: { initialized: boolean }) {
-			setIsInitialized(initialized)
+		let timeoutID: any
+		function callback() {
+			const newAppState = instance.globalGetAppState()
+			if (!newAppState.initialized) {
+				timeoutID = setTimeout(callback, 33)
+			}
+			setAppState(newAppState)
 		}
-		addEventListener(ECSEvent.ON_RUNTIME_INITIALIZED, onRuntimeInitializedCallback)
 
-		setTimeout(() => {
-			setIsInitialized(true)
-		}, 3000)
+		callback()
 		return () => {
-			removeEventListener(ECSEvent.ON_RUNTIME_INITIALIZED, onRuntimeInitializedCallback)
+			if (timeoutID) {
+				clearTimeout(timeoutID)
+			}
 		}
 	}, [])
 
-	return { isInitialized, initializationStage }
+	return appState
 }

@@ -28,6 +28,12 @@ type EntityInfo = {
 	interface: EntityInterface
 }
 
+export type AppState = {
+	initializationStage: string
+	initialized: boolean
+	running: boolean
+}
+
 declare let Vort: any
 declare let UTF8ToString: (rawStringPtr: number) => string
 
@@ -36,20 +42,46 @@ class VortECSInstance {
 
 	private callbacks: Map<ECSEvent, Set<Function>> = new Map()
 
-	initialized: boolean = false
+	private initialized: boolean = false
 
-	isInitialzing: boolean = false
+	private initialzing: boolean = false
 
+	private lastAppState: AppState = {
+		initializationStage: "Creating World",
+		running: true,
+		initialized: false,
+	}
+
+	globalGetAppState(): AppState {
+		if (!this.initialized || this.vortModule.Asyncify.asyncPromiseHandlers) {
+			return this.lastAppState
+		}
+
+		let appStatePtr = this.vortModule.globalGetAppState()
+
+		if (appStatePtr instanceof Promise) {
+			return this.lastAppState
+		}
+
+		let initializationStagePtr = this.vortModule.HEAPU32.at((appStatePtr / 4) | 0)
+
+		let initializationStage = this.vortModule.UTF8ToString(initializationStagePtr)
+		let initialized = this.vortModule.HEAP8.at(appStatePtr + 4) === 1
+		let running = this.vortModule.HEAP8.at(appStatePtr + 4 + 1) === 1
+		this.lastAppState = { initializationStage, initialized, running }
+
+		return this.lastAppState
+	}
 	entitiesRemoveEntity(entityID: number) {
 		this.vortModule.entitiesRemoveEntity(entityID)
 	}
 
-	editorCameraZoom(zoomFactor: number) {
-		this.vortModule.editorCameraZoom(zoomFactor)
+	editorRotateCamera(pitch: number, yaw: number) {
+		this.vortModule.editorRotateCamera(pitch, yaw)
 	}
 
-	editorCameraRotate(pitch: number, yaw: number) {
-		this.vortModule.editorCameraRotate(pitch, yaw)
+	editorMoveCamera(xChange: number, yChange: number, zChange: number) {
+		this.vortModule.editorMoveCamera(xChange, yChange, zChange)
 	}
 
 	entityGetChildren(entityID: number): number[] {
@@ -73,6 +105,7 @@ class VortECSInstance {
 	private dispatch<T extends ECSEvent>(eventType: T, eventData: ECSEventsCallbackArgument<T>) {
 		console.log(eventType, eventData)
 	}
+
 	setCanvasSize(width: number, height: number) {
 		if (this.vortModule) {
 			this.vortModule.setCanvasSize(width, height)
@@ -80,12 +113,16 @@ class VortECSInstance {
 	}
 
 	async startRuntimeInitialization(canvas: HTMLCanvasElement) {
-		if (!(this.initialized || this.isInitialzing)) {
-			this.isInitialzing = true
+		let that = this
+		if (!(this.initialized || this.initialzing)) {
+			this.initialzing = true
 			Object.assign(window, { __VORT_INSTANCE: this })
-			this.vortModule = await Vort({ canvas })
-			console.log("js cone")
-			this.initialized = true
+			this.vortModule = await Vort({
+				canvas,
+				onRuntimeInitialized: () => {
+					that.initialized = true
+				},
+			})
 		}
 	}
 
@@ -163,30 +200,31 @@ export function RenderWindow({ className }: { className?: string }) {
 	const resizeObserver = useRef<ResizeObserver>()
 
 	function containerRef(container: HTMLDivElement) {
-		if (!(instance.initialized || instance.isInitialzing) && container) {
-			resizeObserver.current = new ResizeObserver((entries) => {
-				entries.forEach((entry) => {
-					const { width, height } = entry.contentRect
-					instance.setCanvasSize(width * window.devicePixelRatio, height * window.devicePixelRatio)
-				})
-			})
-			const { width, height } = container.getBoundingClientRect()
-
-			const canvas = container.firstElementChild as HTMLCanvasElement
-
-			canvas.width = width * window.devicePixelRatio
-			canvas.height = height * window.devicePixelRatio
-
-			resizeObserver.current?.observe(container)
-			instance.startRuntimeInitialization(canvas)
+		if (!container) {
+			return
 		}
+		resizeObserver.current = new ResizeObserver((entries) => {
+			entries.forEach((entry) => {
+				const { width, height } = entry.contentRect
+				instance.setCanvasSize(width * window.devicePixelRatio, height * window.devicePixelRatio)
+			})
+		})
+		const { width, height } = container.getBoundingClientRect()
+
+		const canvas = container.firstElementChild as HTMLCanvasElement
+
+		canvas.width = width * window.devicePixelRatio
+		canvas.height = height * window.devicePixelRatio
+
+		resizeObserver.current?.observe(container)
+		instance.startRuntimeInitialization(canvas)
 	}
 
 	return (
 		<div ref={containerRef} className={`${className} overflow-hidden  relative`}>
 			<canvas
 				onWheel={(e) => {
-					instance.editorCameraZoom(e.deltaY)
+					instance.editorMoveCamera(0, 0, e.deltaY)
 				}}
 				className="absolute top-0 left-0 emscripten w-full h-full"
 				id="canvas"

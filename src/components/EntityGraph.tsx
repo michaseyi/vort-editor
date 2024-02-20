@@ -15,7 +15,7 @@ export function EntityGraph() {
 				e.currentTarget.style.setProperty("--show-ui", "0")
 			}}
 			scrollHideDelay={0}
-			className="h-full"
+			className="h-[80%]"
 		>
 			<ul>
 				{rootEntities.map((entityId) => (
