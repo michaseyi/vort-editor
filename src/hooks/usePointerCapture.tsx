@@ -21,8 +21,8 @@ export function usePointerCapture<T extends HTMLElement>(
 		}
 		const { clientX, clientY } = e.touches[0]
 
-		const movementX = clientX - prevTouchData.current.x
-		const movementY = clientY - prevTouchData.current.y
+		const movementX = Math.round(clientX - prevTouchData.current.x)
+		const movementY = Math.round(clientY - prevTouchData.current.y)
 
 		callback(movementX, movementY)
 		prevTouchData.current = { x: clientX, y: clientY }
@@ -48,6 +48,7 @@ export function usePointerCapture<T extends HTMLElement>(
 		const { movementX, movementY } = e
 
 		callback(movementX, movementY)
+	
 	}, [])
 
 	const onMouseEnd = useCallback((e: MouseEvent) => {
@@ -57,7 +58,6 @@ export function usePointerCapture<T extends HTMLElement>(
 
 	function ref(element: T) {
 		if (element) {
-	
 			element.addEventListener("mousedown", onMouseDown)
 			element.addEventListener("touchstart", onTouchStart)
 

@@ -5,10 +5,17 @@ import { IoPlaySharp, IoPlaySkipBackSharp, IoPlaySkipForwardSharp } from "react-
 
 import { FaChevronDown } from "react-icons/fa6"
 import { NumericInput } from "../components/NumericInput"
-import { useEffect, useRef, useState } from "react"
-import { TabBody, TabHeader, TabHeaderLeft, TabHeaderMiddle, TabHeaderRight } from "../components/Tab"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import {
+	TabBody,
+	TabHeader,
+	TabHeaderLeft,
+	TabHeaderMiddle,
+	TabHeaderRight,
+} from "../components/Tab"
 import { usePointerCapture } from "@/hooks/usePointerCapture"
 import { Button } from "@/components/Button"
+import { flushSync } from "react-dom"
 
 function TimelineControls() {
 	interface TimelineControl {
@@ -50,6 +57,7 @@ export function Timeline() {
 	const [stepScale, setStepScale] = useState(stepWidth / stepWeight)
 
 	const [offset, setOffset] = useState(200)
+	const [nextOffset, setNextOffset] = useState(200)
 
 	const [startFrame, setStartFrame] = useState(0)
 	const [startFrameWidth, setStartFrameWidth] = useState(0)
@@ -75,7 +83,7 @@ export function Timeline() {
 	}
 
 	const pointerCaptureRef = usePointerCapture<HTMLDivElement>((movementX) => {
-		setOffset((prev) => {
+		setNextOffset((prev) => {
 			prev = Math.trunc(prev + movementX)
 			return prev
 		})
@@ -92,11 +100,13 @@ export function Timeline() {
 			graphContainerResizeObserver.current?.disconnect()
 		}
 	}, [])
+
 	useEffect(() => {
-		setStartFrameWidth(frameCountToScreenWidth(startFrame, offset, stepWidth, stepWeight))
-		setEndFrameWidth(frameCountToScreenWidth(endFrame, offset, stepWidth, stepWeight))
-		setCurrentFrameWidth(frameCountToScreenWidth(currentFrame, offset, stepWidth, stepWeight))
-	}, [currentFrame, startFrame, offset, stepWidth, stepWeight, endFrame])
+		setStartFrameWidth(frameCountToScreenWidth(startFrame, nextOffset, stepWidth, stepWeight))
+		setEndFrameWidth(frameCountToScreenWidth(endFrame, nextOffset, stepWidth, stepWeight))
+		setCurrentFrameWidth(frameCountToScreenWidth(currentFrame, nextOffset, stepWidth, stepWeight))
+		setOffset(nextOffset)
+	}, [currentFrame, startFrame, stepWidth, stepWeight, endFrame, nextOffset])
 
 	function updateStepData(newWidth: number, centerPosition: number) {
 		let newScale = newWidth / stepWeight
@@ -136,6 +146,7 @@ export function Timeline() {
 		)
 
 		setOffset(offset + (centerPosition - newCenterPosition))
+		setNextOffset(offset + (centerPosition - newCenterPosition))
 		setStepScale(newScale)
 		setStepWeight(newWeight)
 		setStepWidth(newWidth)
@@ -247,9 +258,7 @@ export function Timeline() {
 								startFrameWidth + 1
 							}px,#72161650 ${endFrameWidth}px, black ${endFrameWidth}px, black ${
 								endFrameWidth + 1
-							}px,  transparent ${
-								endFrameWidth + 1
-							}px)`,
+							}px,  transparent ${endFrameWidth + 1}px)`,
 							backgroundSize: `auto, ${stepWidth}px, auto, auto`,
 							backgroundPosition: `0, ${offset}px, 0, 0`,
 							backgroundRepeat: "no-repeat, repeat, no-repeat, no-repeat",

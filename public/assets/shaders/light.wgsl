@@ -28,7 +28,7 @@ fn compute_directional_light(light: DirectionalLight, normal: vec3<f32>) -> vec3
 
 fn compute_spot_light(light: SpotLight, position: vec3<f32>, normal: vec3<f32>) -> vec3<f32> {
     let light_vector: vec3<f32> = normalize(light.position - position);
-    let illumination_factor: f32 = max(0, dot(light_vector, normal));
+    let illumination_factor: f32 = max(0.0, dot(light_vector, normal));
     let cosine_cone_angle: f32 = acos(dot(light.direction, -light_vector));
     let falloff_factor: f32 = 1f - smoothstep(light.inner_cone_angle, light.outer_cone_angle, cosine_cone_angle);
     let attenuation_factor: f32 = compute_attenuation_factor(light.attenuation_coefficients, distance(light.position, position));
@@ -40,18 +40,22 @@ fn compute_total_light(position: vec3<f32>, surface_normal: vec3<f32>) -> vec3<f
     var total_light: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
 
     for (var i: u32 = 0u; i < common_uniforms.ambient_light_count; i++) {
-        total_light += compute_ambient_light(common_uniforms.ambient_lights[i]);
+        var light_source = common_uniforms.ambient_lights[i];
+        total_light += compute_ambient_light(light_source);
     }
 
     for (var i: u32 = 0u; i < common_uniforms.spot_light_count; i++) {
-        total_light += compute_spot_light(common_uniforms.spot_lights[i], position, surface_normal);
+        var light_source = common_uniforms.spot_lights[i];
+        total_light += compute_spot_light(light_source, position, surface_normal);
     }
 
     for (var i: u32 = 0u; i < common_uniforms.directional_light_count; i++) {
-        total_light += compute_directional_light(common_uniforms.directional_lights[i], surface_normal);
+        var light_source = common_uniforms.directional_lights[i];
+        total_light += compute_directional_light(light_source, surface_normal);
     }
     for (var i: u32 = 0u; i < common_uniforms.point_light_count; i++) {
-        total_light += compute_point_light(common_uniforms.point_lights[i], position, surface_normal);
+        var light_source = common_uniforms.point_lights[i];
+        total_light += compute_point_light(light_source, position, surface_normal);
     }
 
     return total_light;
