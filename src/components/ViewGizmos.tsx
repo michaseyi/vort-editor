@@ -1,6 +1,7 @@
+import { usePointerCapture } from "@/hooks/usePointerCapture"
 import { cn } from "@/lib/utils"
-import { useInstance } from "@/vort-ecs-connector"
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
+import { ViewGizmoData, useInstance } from "@/lib/ecs-connector"
+import { HTMLAttributes, forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 
 type ViewGizmosAxisDirection = "X" | "-X" | "Y" | "-Y" | "Z" | "-Z"
 
@@ -16,12 +17,12 @@ const ViewGizmosAxisColorMap: Map<ViewGizmosAxisDirection, string> = new Map([
 interface ViewGizmosAxisProps {
 	axis: ViewGizmosAxisDirection
 	active?: boolean
-	position: [number, number]
+	position: [number, number, number]
 	jumpToAxis: (axis: ViewGizmosAxisDirection) => void
 }
 
 export function ViewGizmosAxis({ axis, position, jumpToAxis }: ViewGizmosAxisProps) {
-	const [xPos, yPos] = position
+	const [xPos, yPos, depth] = position
 
 	const isNegative = axis.length === 2
 
@@ -36,10 +37,11 @@ export function ViewGizmosAxis({ axis, position, jumpToAxis }: ViewGizmosAxisPro
 				top: `${yPos * 100}%`,
 				left: `${xPos * 100}%`,
 				transform: "translate(-50%, -50%)",
+				zIndex: `${Math.round(depth * 5 + 10)}`,
 			}}
 			className={cn(
 				"absolute text-[0.7rem] font-bold  w-4 h-4 rounded-full  grid place-items-center hover:text-white hover:font-extrabold transition-colors",
-				isNegative ? "border-[1.5px] bg-[rgba(80,80,80,0.5)] text-transparent" : "text-[#1A1A1A]"
+				isNegative ? "border-[1.5px] bg-[rgb(80,80,80)] text-transparent" : "text-[#1A1A1A]"
 			)}
 		>
 			{axis}
@@ -48,80 +50,64 @@ export function ViewGizmosAxis({ axis, position, jumpToAxis }: ViewGizmosAxisPro
 }
 
 interface ViewGizmosAxisLinesProps {
-	positions: {
-		[key: string]: [number, number]
-	}
+	positions: ViewGizmoData
 }
 
 export function ViewGizmosAxisLines({ positions }: ViewGizmosAxisLinesProps) {
 	const axes: ViewGizmosAxisDirection[] = ["X", "Y", "Z"]
+
 	return (
-		<svg viewBox="0 0 100 100" className="w-full h-full">
-			{axes.map((axis) => (
-				<path
-					key={axis}
-					d={`M${positions[axis][0] * 100} ${positions[axis][1] * 100} L50 50`}
-					strokeWidth="2"
-					stroke={ViewGizmosAxisColorMap.get(axis)}
-				></path>
+		<>
+			{axes.map((axis, idx) => (
+				<svg
+					key={idx}
+					style={{
+						zIndex: `${Math.round(positions[axis][2] * 5 + 10)}`,
+					}}
+					viewBox="0 0 100 100"
+					className="absolute top-0 left-0 w-full h-full"
+				>
+					<path
+						key={axis}
+						d={`M${positions[axis][0] * 100} ${positions[axis][1] * 100} L50 50`}
+						strokeWidth="3"
+						stroke={ViewGizmosAxisColorMap.get(axis)}
+					></path>
+				</svg>
 			))}
-		</svg>
+		</>
 	)
 }
-interface ViewGizmosProps {
-	className?: string
+interface ViewGizmosProps extends HTMLAttributes<HTMLDivElement> {
+	canvasSelectorPtr: number
 }
 
-export function ViewGizmos({ className }: ViewGizmosProps) {
+export function ViewGizmos({ className, canvasSelectorPtr }: ViewGizmosProps) {
 	// request editor veiw object
 	const instance = useInstance()
 	const axes: ViewGizmosAxisDirection[] = ["-X", "-Y", "-Z", "X", "Y", "Z"]
 
-	const positions: { [key: string]: [number, number] } = {
-		X: [0.9, 0.36],
-		Y: [0.5, 0.06],
-		Z: [0.79, 0.7],
-		"-X": [0.08, 0.63],
-		"-Y": [0.5, 0.93],
-		"-Z": [0.2, 0.3],
-	}
+	const [positions, setPositions] = useState<ViewGizmoData>(() =>
+		instance.editorGetViewGizmoData(canvasSelectorPtr)
+	)
 
 	function jumpToAxis(axis: ViewGizmosAxisDirection) {
 		// rotate editor view to axis
 		console.log("setting view to", axis)
 	}
 
-	const capturePointer = useRef(false)
+	const ref = usePointerCapture<HTMLDivElement>((movementX, movementY) => {
+		instance.editorRotateCamera(canvasSelectorPtr, -movementY, -movementX)
+		setPositions(instance.editorGetViewGizmoData(canvasSelectorPtr))
+	})
 
 	return (
 		<div
-			onPointerDown={(e) => {
-				e.stopPropagation()
-				capturePointer.current = true
-			}}
-			onPointerMove={(e) => {
-				if (!capturePointer.current) {
-					return
-				}
-
-				if (document.pointerLockElement !== e.currentTarget) {
-					e.currentTarget.requestPointerLock()
-				}
-				const { movementX, movementY } = e
-
-				instance.editorRotateCamera(-movementY, -movementX)
-			}}
-			onPointerUp={(e) => {
-				capturePointer.current = false
-				document.exitPointerLock()
-			}}
-			onPointerLeave={(e) => {
-				capturePointer.current = false
-				document.exitPointerLock()
-			}}
+			ref={ref}
 			className={cn(
 				className,
-				"select-none hover:bg-gray-400/50 hover:shadow-extend shadow-gray-400/50 w-16 h-16 rounded-full transition-[box-shadow,background-color] relative"
+				// "select-none  w-14 h-14 rounded-full transition-[box-shadow,background-color] relative"
+				"select-none hover:bg-gray-400/50 hover:shadow-extend shadow-gray-400/50 w-14 h-14 rounded-full transition-[box-shadow,background-color] relative"
 			)}
 		>
 			<ViewGizmosAxisLines positions={positions} />

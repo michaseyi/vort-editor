@@ -25,7 +25,7 @@ import {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { EntityInterface, useEntity, useEntityChildren, useInstance } from "@/vort-ecs-connector"
+import { EntityInterface, useEntity, useEntityChildren, useInstance } from "@/lib/ecs-connector"
 
 let interfaceIconMap = new Map<EntityInterface, FC<any>>([
 	[EntityInterface.Camera, GoDeviceCameraVideo],
@@ -57,7 +57,7 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 		}
 
 	return (
-		<li className={hidden || parentHidden ? "text-[#787878]" : "text-white"}>
+		<li className={hidden || parentHidden ? "text-[#787878]" : "text-white/70"}>
 			<ContextMenu>
 				<ContextMenuTrigger
 					tabIndex={1}
@@ -69,7 +69,7 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 						setActive(false)
 					}}
 					className={cn(
-						"peer group pl-0.5 pr-3 py-2 flex gap-x-1 items-center focus:outline-none",
+						"peer group pl-0.5 pr-3 py-2 flex gap-x-1 items-center focus:outline-none min-w-max [&>*]:flex-shrink-0",
 						active
 							? "bg-[#4A5878]"
 							: " hover:!outline  hover:!outline-1 hover:!-outline-offset-1 hover:!outline-[#0C8CE9]"
@@ -103,7 +103,10 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 							)}
 						/>
 						<span
-							className={cn("text-[0.69rem] leading-4", root ? "font-semibold " : "font-normal")}
+							className={cn(
+								"text-[0.7rem] leading-4"
+								// root ? "font-semibold " : "font-normal"
+							)}
 						>
 							{entityInfo.name}
 						</span>

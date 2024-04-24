@@ -6,10 +6,10 @@ import Script from "next/script"
 
 const inter = Inter({ subsets: ["cyrillic"] })
 const jetbrains = JetBrains_Mono({ subsets: ["latin"] })
-const lato = Lato({ subsets: ["latin"], weight: ["400", "300", "700", "900"] })
+// const lato = Lato({ subsets: ["latin"], weight: ["400", "300", "700", "900"] })
 
 export const metadata: Metadata = {
-	title: "Vort",
+	title: "Untitled project - Vort",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

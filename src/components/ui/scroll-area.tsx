@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 
 const ScrollArea = React.forwardRef<
 	React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & { hideScrollbar?: boolean }
+>(({ className, children, hideScrollbar, ...props }, ref) => (
 	<ScrollAreaPrimitive.Root
 		ref={ref}
 		className={cn("relative overflow-hidden", className)}
@@ -17,7 +17,7 @@ const ScrollArea = React.forwardRef<
 		<ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
 			{children}
 		</ScrollAreaPrimitive.Viewport>
-		<ScrollBar />
+		<ScrollBar hideScrollbar={hideScrollbar} />
 		<ScrollAreaPrimitive.Corner />
 	</ScrollAreaPrimitive.Root>
 ))
@@ -25,8 +25,10 @@ ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
 
 const ScrollBar = React.forwardRef<
 	React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
-	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
->(({ className, orientation = "vertical", ...props }, ref) => (
+	React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar> & {
+		hideScrollbar?: boolean
+	}
+>(({ className, hideScrollbar, orientation = "vertical", ...props }, ref) => (
 	<ScrollAreaPrimitive.ScrollAreaScrollbar
 		ref={ref}
 		orientation={orientation}
@@ -38,7 +40,9 @@ const ScrollBar = React.forwardRef<
 		)}
 		{...props}
 	>
-		<ScrollAreaPrimitive.ScrollAreaThumb  className="relative flex-1 rounded-full  bg-[#CDC5C5]/20 dark:bg-[#CDC5C5]/20" />
+		{!hideScrollbar && (
+			<ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full  bg-[#CDC5C5]/20 dark:bg-[#CDC5C5]/20" />
+		)}
 	</ScrollAreaPrimitive.ScrollAreaScrollbar>
 ))
 ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName
