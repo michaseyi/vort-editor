@@ -76,7 +76,6 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 		)
 	}, [entityInterface])
 
-	
 	return (
 		<li className={isEntityVisible || parentHidden ? "text-[#787878]" : "text-white/70"}>
 			<ContextMenu>
@@ -160,18 +159,8 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 						}}
 					>
 						Delete
-						<ContextMenuShortcut>⌘R</ContextMenuShortcut>
+						<ContextMenuShortcut>Shift R</ContextMenuShortcut>
 					</ContextMenuItem>
-					<ContextMenuSub>
-						<ContextMenuSubTrigger>More Tools</ContextMenuSubTrigger>
-						<ContextMenuSubContent className="w-48 bg-[#1E1E1E] border-[#2C2C2C]">
-							<ContextMenuItem>
-								Save Page As...
-								<ContextMenuShortcut>⇧⌘S</ContextMenuShortcut>
-							</ContextMenuItem>
-							<ContextMenuItem>Create Shortcut...</ContextMenuItem>
-						</ContextMenuSubContent>
-					</ContextMenuSub>
 				</ContextMenuContent>
 			</ContextMenu>
 

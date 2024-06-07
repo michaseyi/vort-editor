@@ -184,7 +184,7 @@ export function Properties() {
 		<section className="h-full flex flex-col rounded-lg overflow-hidden">
 			<TabHeader tabName="Properties"></TabHeader>
 			<TabBody>
-				<Tabs defaultValue="Modifier" className="flex h-full">
+				<Tabs defaultValue="Material" className="flex h-full">
 					<ScrollArea hideScrollbar className="w-7 h-full bg-[rgb(23,23,23)] flex-shrink-0">
 						<TabsList className="flex flex-col items-center p-0 justify-normal h-full ">
 							{PropertyTabs.groups.map((group, groupIdx) => {

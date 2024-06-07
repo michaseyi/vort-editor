@@ -9,7 +9,8 @@ import { useEditorStore } from "@/lib/editor/useEditorStore"
 import { useEntityChildren } from "@/lib/editor/useEntityChildren"
 import { useEntityComponent } from "@/lib/editor/useEntityComponent"
 import { ComponentType } from "@/lib/editor/types"
-import { Key, KeyProvider, KeyState, isPressed, useKeys } from "@/lib/editor/keyStore"
+import { Key, KeyProvider, KeyState, isPressed, isReleased, useKeys } from "@/lib/editor/keyStore"
+import { useEditorControls } from "@/lib/editor/useEditorControls"
 
 export default function Wrapper() {
 	return (
@@ -97,6 +98,29 @@ function EditorPage() {
 					</ResizablePanelGroup>
 				</ResizablePanel>
 			</ResizablePanelGroup>
+			<KeyBoardShortcuts />
 		</div>
 	)
+}
+
+function KeyBoardShortcuts() {
+	const keys = useKeys()
+
+	const shift = keys.use.Shift()
+	const x = keys.use.KeyX()
+
+	const editorStore = useEditorStore()
+
+	const lastSelectedEntity = editorStore.use.lastSelectedEntity()
+
+	const { removeEntity } = useEditorControls()
+
+	useEffect(() => {
+		if (isPressed(shift) && isPressed(x) && lastSelectedEntity) {
+			removeEntity(lastSelectedEntity)
+			return
+		}
+	}, [shift, x])
+
+	return <></>
 }
