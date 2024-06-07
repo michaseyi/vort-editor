@@ -38,7 +38,7 @@ import { FaSquareFull } from "react-icons/fa"
 
 import { ViewGizmos } from "@/components/ViewGizmos"
 import { BoundingBoxSelector } from "@/components/BoundingBoxSelector"
-import { useInstance } from "@/lib/ecs-connector"
+
 import { GoZoomIn } from "react-icons/go"
 import { GoDeviceCameraVideo } from "react-icons/go"
 
@@ -56,11 +56,20 @@ import {
 	MenubarSubContent,
 	MenubarSubTrigger,
 } from "@/components/ui/menubar"
-import { OBJECT_INTERRACTION_MODES, ObjectInterractionMode } from "@/lib/editor-plugin/objects"
+
 import { FaChevronDown } from "react-icons/fa6"
+import { EditorMode } from "@/lib/editor/types"
+import { useEditorControls } from "@/lib/editor/useEditorControls"
+import { useSceneRenderTarget } from "@/lib/editor/useSceneRenderTarget"
+
+const OBJECT_INTERACTION_MODES = [
+	{ type: EditorMode.EditMode, name: "Edit Mode" },
+	{ type: EditorMode.SculptMode, name: "Sculpt Mode" },
+	{ type: EditorMode.ObjectMode, name: "Object Mode" },
+]
 
 function ObjectInteractionModeMenu() {
-	const [currentViewMode, setCurrentViewMode] = useState(OBJECT_INTERRACTION_MODES[0].type)
+	const [currentViewMode, setCurrentViewMode] = useState(OBJECT_INTERACTION_MODES[0].type)
 
 	const OBJECT_INTERACTION_MODE_ICONS = [
 		<Shapes className="icon" key="Object Mode" />,
@@ -73,12 +82,12 @@ function ObjectInteractionModeMenu() {
 			<MenubarTrigger className="outline-button data-[state=open]:bg-[rgb(71,106,194)]  data-[state=open]:border-[rgb(71,106,194)]">
 				{OBJECT_INTERACTION_MODE_ICONS[currentViewMode]}
 				<span className="outline-button-text">
-					{OBJECT_INTERRACTION_MODES[currentViewMode].name}
+					{OBJECT_INTERACTION_MODES[currentViewMode].name}
 				</span>
 				<FaChevronDown size={8} />
 			</MenubarTrigger>
 			<MenubarContent className="space-y-1">
-				{OBJECT_INTERRACTION_MODES.map((viewMode) => (
+				{OBJECT_INTERACTION_MODES.map((viewMode) => (
 					<MenubarItem
 						className={cn(
 							currentViewMode === viewMode.type && "bg-[rgb(71,106,194)] hover:bg-[rgb(71,106,194)]"
@@ -102,7 +111,14 @@ function ViewMenu() {
 }
 
 function AddMeshSubMenu() {
-	const instance = useInstance()
+	const {
+		createCubeMesh,
+		createUVSphereMesh,
+		createCylinderMesh,
+		createConeMesh,
+		createPlaneMesh,
+		createTorusMesh,
+	} = useEditorControls()
 
 	return (
 		<MenubarSub>
@@ -111,28 +127,28 @@ function AddMeshSubMenu() {
 				Mesh
 			</MenubarSubTrigger>
 			<MenubarSubContent>
-				<MenubarItem onClick={() => instance.module.entitiesCreateCubeMesh(1)}>
+				<MenubarItem onClick={() => createCubeMesh(1, {} as any)}>
 					<Box className="icon" />
 					Cube
 				</MenubarItem>
-				<MenubarItem onClick={() => instance.module.entitiesCreateUVSphereMesh(1)}>
+				<MenubarItem onClick={() => createUVSphereMesh(1, {} as any)}>
 					<Globe className="icon" />
 					UVSphere
 				</MenubarItem>
-				<MenubarItem onClick={() => instance.module.entitiesCreateCylinderMesh(1)}>
+				<MenubarItem onClick={() => createCylinderMesh(1, {} as any)}>
 					<Cylinder className="icon" />
 					Cylinder
 				</MenubarItem>
-				<MenubarItem onClick={() => instance.module.entitiesCreateConeMesh(1)}>
+				<MenubarItem onClick={() => createConeMesh(1, {} as any)}>
 					<Cone className="icon" />
 					Cone
 				</MenubarItem>
 
-				<MenubarItem onClick={() => instance.module.entitiesCreatePlaneMesh(1)}>
+				<MenubarItem onClick={() => createPlaneMesh(1, {} as any)}>
 					<Square className="icon" />
 					Plane
 				</MenubarItem>
-				<MenubarItem onClick={() => instance.module.entitiesCreateTorusMesh(1)}>
+				<MenubarItem onClick={() => createTorusMesh(1, {} as any)}>
 					<Torus className="icon" />
 					Torus
 				</MenubarItem>
@@ -176,83 +192,13 @@ function AddMenu() {
 	)
 }
 
-type EditorState = {
-	objectInterractionMode: ObjectInterractionMode
-}
-
 export function Viewport() {
-	const instance = useInstance()
+	const [isReady, canvasId, renderTargetId] = useSceneRenderTarget()
 
-	const [canvasID] = useState<string>(() => {
-		return `c${crypto.randomUUID()}`
-	})
+	const { zoomSceneRenderTargetCamera } = useEditorControls()
 
-	// TODO: This pointer should be deallocated at the end of the lifetime of this component
-	const [canvasSelectorPtr] = useState<number>(() => {
-		return instance.module.stringToNewUTF8(`#${canvasID}`)
-	})
-
-	const resizeObserver = useRef<ResizeObserver>()
-
-	const [canvasContainer, setCanvasContainer] = useState<HTMLDivElement>()
-
-	const [renderOutputCreated, setRenderOutputCreated] = useState(false)
-
-	function containerRef(container: HTMLDivElement) {
-		if (!container) {
-			return
-		}
-
-		if (resizeObserver.current) {
-			return
-		}
-
-		if (canvasContainer) {
-			return
-		}
-
-		setCanvasContainer(container)
-	}
-
-	useEffect(() => {
-		if (!canvasContainer) return
-
-		resizeObserver.current = new ResizeObserver((entries) => {
-			const entry = entries[0]
-			const { width, height } = entry.contentRect
-
-			const canvas = entry.target.firstElementChild as HTMLCanvasElement
-
-			// setting _width and _height instead of width and height because setting width and height on
-			// a canvas element clears the canvas extra cpu overhead (causes noticable lags when resizing the canvas).
-			// So instead, we store the updated width and height in the _width and _height member variable till the
-			//next animation frame where the canvas will be updated.
-			;(canvas as any)._width = width * window.devicePixelRatio
-			;(canvas as any)._height = height * window.devicePixelRatio
-
-			instance.module.editorUpdateRenderOutput(canvasSelectorPtr)
-		})
-
-		resizeObserver.current.observe(canvasContainer)
-
-		const { width, height } = canvasContainer.getBoundingClientRect()
-
-		const canvas = canvasContainer.firstElementChild as HTMLCanvasElement
-
-		;(canvas as any)._width = width * window.devicePixelRatio
-		;(canvas as any)._height = height * window.devicePixelRatio
-
-		instance.module.editorCreateRenderOutput(canvasSelectorPtr)
-
-		setRenderOutputCreated(true)
-
-		return () => {
-			resizeObserver.current?.disconnect()
-			instance.module.editorDeleteRenderOutput(canvasSelectorPtr)
-		}
-	}, [canvasContainer])
 	return (
-		<section className="h-full flex flex-col">
+		<section className="h-full flex flex-col relative rounded-lg overflow-hidden">
 			<TabHeader tabName="3D Viewport">
 				<TabHeaderLeft>
 					<ObjectInteractionModeMenu />
@@ -299,29 +245,29 @@ export function Viewport() {
 					</div>
 				</TabHeaderRight>
 			</TabHeader>
-			<TabBody>
+			<TabBody className="rounded-t-lg">
 				<BoundingBoxSelector className="h-full" showHelperBox>
 					<div className="h-full relative">
-						<div ref={containerRef} className="overflow-hidden  relative  w-full h-full">
+						<div className="overflow-hidden  relative w-full h-full">
 							<canvas
 								onWheel={(e) => {
-									if (!renderOutputCreated) return
-									instance.editorMoveCamera(canvasSelectorPtr, 0, 0, e.deltaY)
+									if (!isReady) return
+									zoomSceneRenderTargetCamera(renderTargetId, e.deltaY * 0.3)
 								}}
 								className="absolute top-0 left-0"
-								id={canvasID}
+								id={canvasId}
 							></canvas>
 						</div>
 
-						{renderOutputCreated && (
-							<div className="absolute top-5 right-6 gap-y-4 flex flex-col items-center select-none">
-								<ViewGizmos canvasSelectorPtr={canvasSelectorPtr} />
+						{isReady && (
+							<div className="absolute top-10 right-6 gap-y-4 flex flex-col items-center select-none">
+								<ViewGizmos canvasSelectorPtr={renderTargetId} />
 
 								{/* Controls */}
 								<div className="flex flex-col items-center gap-y-1">
-									<MoveView canvasSelectorPtr={canvasSelectorPtr} />
-									<Zoom canvasSelectorPtr={canvasSelectorPtr} />
-									<ToggleCameraView canvasSelectorPtr={canvasSelectorPtr} />
+									<MoveView canvasSelectorPtr={renderTargetId} />
+									<Zoom canvasSelectorPtr={renderTargetId} />
+									<ToggleCameraView canvasSelectorPtr={renderTargetId} />
 								</div>
 							</div>
 						)}
@@ -343,10 +289,9 @@ function ToggleCameraView({ canvasSelectorPtr }: { canvasSelectorPtr: number }) 
 }
 
 function Zoom({ canvasSelectorPtr }: { canvasSelectorPtr: number }) {
-	const instance = useInstance()
-
-	const ref = usePointerCapture<HTMLButtonElement>((movementX: number, movementY: number) => {
-		instance.editorMoveCamera(canvasSelectorPtr, 0, 0, movementY * 2.5)
+	const { zoomSceneRenderTargetCamera } = useEditorControls()
+	const ref = usePointerCapture<HTMLButtonElement>((_: number, movementY: number) => {
+		zoomSceneRenderTargetCamera(canvasSelectorPtr, movementY * 2.5)
 	})
 
 	return (
@@ -360,10 +305,9 @@ function Zoom({ canvasSelectorPtr }: { canvasSelectorPtr: number }) {
 }
 
 function MoveView({ canvasSelectorPtr }: { canvasSelectorPtr: number }) {
-	const instance = useInstance()
-
+	const { moveSceneRenderTargetCamera } = useEditorControls()
 	const ref = usePointerCapture<HTMLButtonElement>((movementX, movementY) => {
-		instance.editorMoveCamera(canvasSelectorPtr, -movementX, movementY, 0)
+		moveSceneRenderTargetCamera(canvasSelectorPtr, -movementX, movementY)
 	})
 
 	return (

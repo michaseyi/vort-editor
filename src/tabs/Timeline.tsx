@@ -171,7 +171,7 @@ export function Timeline() {
 	}
 
 	return (
-		<section className="h-full flex flex-col">
+		<section className="h-full flex flex-col rounded-lg overflow-hidden">
 			<TabHeader tabName="Timeline">
 				<TabHeaderLeft>
 					<Button variant="outline" text="Playback" />

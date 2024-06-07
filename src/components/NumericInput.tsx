@@ -16,18 +16,26 @@ function trimZeroes(number: string): string {
 			break
 		}
 	}
-
 	return number.substring(0, number.length - zeroCount)
 }
+
+function clamp(value: number, min: number, max: number) {
+	return Math.max(min, Math.min(max, value))
+}
+
 function roundFloat(number: number): number {
 	return +number.toFixed(5)
 }
-interface NumericInputProps {
+
+type NumericInputVariant = "default" | "small" | "ranged"
+interface NumericInputProps extends Omit<HTMLAttributes<HTMLDivElement>, "onChange"> {
 	unit: string
 	inputName?: string
+	startValue?: number
 	step: number
 	min?: number
 	max?: number
+	variant?: NumericInputVariant
 	onChange?: (newVal: number) => void
 }
 export function NumericInput({
@@ -36,90 +44,106 @@ export function NumericInput({
 	className,
 	step,
 	onChange,
+	min = Number.NEGATIVE_INFINITY,
+	max = Number.POSITIVE_INFINITY,
+	startValue = 0,
+	variant = "default",
 	...rest
-}: NumericInputProps & Omit<HTMLAttributes<HTMLDivElement>, "onChange">) {
-	const [active, setActive] = useState(false)
-	const [value, setValue] = useState(0)
+}: NumericInputProps) {
+	const [isInputActive, setIsInputActive] = useState(false)
+
+	const [inputValue, setInputValue] = useState(() => clamp(startValue, min, max))
+
+	const [tempInputValue, setTempInputValue] = useState("")
 
 	const inputRef = useRef<HTMLInputElement>(null)
 
-	const [inputValue, setInputValue] = useState("")
-
-	function increment() {
-		setValue((prev) => roundFloat(prev + step))
+	function incrementInputValue() {
+		setInputValue((prev) => clamp(roundFloat(prev + step), min, max))
 	}
-	function decrement() {
-		setValue((prev) => roundFloat(prev - step))
+	function decrementInputValue() {
+		setInputValue((prev) => clamp(roundFloat(prev - step), min, max))
 	}
-	const pointerCaptureRef = usePointerCapture<HTMLDivElement>((x, y) => {
-		setValue((prev) => roundFloat(prev + x * step))
+	const inputPointerCaptureRef = usePointerCapture<HTMLDivElement>((x, y) => {
+		setInputValue((prev) => clamp(roundFloat(prev + x * step), min, max))
 	})
 
 	useEffect(() => {
-		onChange && onChange(value)
-	}, [value])
+		onChange && onChange(inputValue)
+	}, [inputValue])
 
 	return (
 		<div
 			className={cn(className, "group flex flex-row items-center overflow-hidden text-shadow")}
 			{...rest}
 		>
-			{!active && (
+			{!isInputActive && !(variant == "ranged") && (
 				<button
-					onClick={decrement}
+					onClick={decrementInputValue}
 					className="invisible group-hover:visible hover:bg-[rgb(128,128,128)] h-full px-0.5"
 				>
 					<FaChevronLeft size={8} />
 				</button>
 			)}
 
-			{active ? (
+			{isInputActive ? (
 				<div className="bg-[rgb(38,38,38)] h-full flex-1 px-1.5">
 					<input
 						ref={inputRef}
 						type="text"
-						name=""
-						id=""
-						value={inputValue}
+						value={tempInputValue}
 						className="focus:outline-none h-full w-full bg-transparent"
 						onBlur={() => {
-							setActive(false)
+							setIsInputActive(false)
 
-							let newValue = +inputValue
+							let newInputValue = unit ? +tempInputValue.split(unit)[0] : +tempInputValue
 
-							if (Number.isNaN(newValue)) {
+							if (Number.isNaN(newInputValue)) {
 								return
 							}
-							setValue(roundFloat(newValue))
+
+							setInputValue(clamp(roundFloat(newInputValue), min, max))
 						}}
 						onChange={(e) => {
-							setInputValue(e.currentTarget.value)
+							setTempInputValue(e.currentTarget.value)
 						}}
 					/>
 				</div>
 			) : (
 				<div
-					ref={pointerCaptureRef}
+					ref={inputPointerCaptureRef}
 					onClick={() => {
 						flushSync(() => {
-							setActive(true)
-							setInputValue(`${value}`)
+							setIsInputActive(true)
+							setTempInputValue(unit ? `${inputValue} ${unit}` : `${inputValue}`)
 						})
 						inputRef.current!.focus()
+						inputRef.current!.select()
+					}}
+					style={{
+						backgroundImage:
+							variant == "ranged"
+								? `linear-gradient(to right,  rgb(69,117,188)${
+										(100 * (inputValue - min)) / (max - min)
+								  }%, transparent ${(100 * (inputValue - min)) / (max - min)}%)`
+								: undefined,
 					}}
 					className={cn(
-						"flex-1 cursor-ew-resize select-none hover:bg-[rgb(128,128,128)] h-full flex items-center px-0.5 truncate",
-						inputName ? "justify-between gap-x-1" : "justify-center"
+						"flex-1 cursor-ew-resize select-none active:bg-[rgb(38,38,38)] hover:bg-[rgb(128,128,128)] h-full flex items-center px-0.5 truncate text-inherit",
+						inputName ? "justify-between gap-x-1" : "justify-center",
+						variant == "ranged" ? "px-4" : undefined
 					)}
 				>
-					<span>{inputName && inputName}</span> {trimZeroes((+value.toPrecision(15)).toFixed(5))}{" "}
-					{unit}
+					{inputName && <span className="flex items-center">{inputName}</span>}
+					<span>
+						{trimZeroes((+inputValue.toPrecision(15)).toFixed(5))} {unit}
+					</span>
 				</div>
 			)}
 
-			{!active && (
+			{!isInputActive && !(variant == "ranged") && (
 				<button
-					onClick={increment}
+					onClick={incrementInputValue}
 					className="invisible group-hover:visible hover:bg-[rgb(128,128,128)]  h-full px-0.5"
 				>
 					<FaChevronRight size={8} />

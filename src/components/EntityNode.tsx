@@ -1,5 +1,5 @@
 "use client"
-import { FC, useEffect, useState } from "react"
+import { FC, useEffect, useMemo, useState } from "react"
 import { RxTriangleRight } from "react-icons/rx"
 import { GiCardboardBox } from "react-icons/gi"
 import { GoEye } from "react-icons/go"
@@ -25,7 +25,12 @@ import {
 	ContextMenuSubTrigger,
 	ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { EntityInterface, useEntity, useEntityChildren, useInstance } from "@/lib/ecs-connector"
+import { EntityInterface } from "@/lib/editor/types"
+import { useEntityChildren } from "@/lib/editor/useEntityChildren"
+import { useEntityInfo } from "@/lib/editor/useEntityInfo"
+import { useEditorControls } from "@/lib/editor/useEditorControls"
+import { useEditorStore } from "@/lib/editor/useEditorStore"
+import { KeyState, useKeys } from "@/lib/editor/keyStore"
 
 let interfaceIconMap = new Map<EntityInterface, FC<any>>([
 	[EntityInterface.Camera, GoDeviceCameraVideo],
@@ -41,36 +46,57 @@ interface EntityNodeProps {
 	parentHidden?: boolean
 }
 export function EntityNode({ root, padding, entityID, parentHidden }: EntityNodeProps) {
-	const instance = useInstance()
+	const { entityName, entityInterface } = useEntityInfo(entityID)
+	const entityChildren = useEntityChildren(entityID)
 
-	const entityInfo = useEntity(entityID)
+	const { removeEntity } = useEditorControls()
 
-	const children = useEntityChildren(entityID)
+	const [isNodeExpanded, setIsNodeExpanded] = useState(root)
+	const [isEntityVisible, setIsEntityVisible] = useState(false)
 
-	const [expanded, setExpanded] = useState(root)
-	const [hidden, setHidden] = useState(false)
-	const [active, setActive] = useState(false)
-	const InterfaceIcon =
-		interfaceIconMap.get(entityInfo.interface) ??
-		function () {
-			return <></>
-		}
+	const editorStore = useEditorStore()
+	const selectedEntities = editorStore.use.selectedEntities()
+	const selectEntity = editorStore.use.selectEntity()
+	const unselectEntity = editorStore.use.unselectEntity()
+	const clearSelection = editorStore.use.clearSelection()
 
+	const keys = useKeys()
+	const controlKeyState = keys.use.Control()
+
+	const selected = useMemo(() => {
+		return selectedEntities.has(entityID)
+	}, [selectedEntities, entityID])
+
+	const InterfaceIcon = useMemo(() => {
+		return (
+			interfaceIconMap.get(entityInterface) ??
+			function () {
+				return <></>
+			}
+		)
+	}, [entityInterface])
+
+	
 	return (
-		<li className={hidden || parentHidden ? "text-[#787878]" : "text-white/70"}>
+		<li className={isEntityVisible || parentHidden ? "text-[#787878]" : "text-white/70"}>
 			<ContextMenu>
 				<ContextMenuTrigger
 					tabIndex={1}
 					onPointerDown={(e) => {
 						e.currentTarget.focus()
-						setActive(true)
-					}}
-					onBlur={() => {
-						setActive(false)
+						if (controlKeyState === KeyState.Released) {
+							clearSelection()
+						}
+
+						if (controlKeyState === KeyState.Pressed && selected) {
+							unselectEntity(entityID)
+						} else {
+							selectEntity(entityID)
+						}
 					}}
 					className={cn(
 						"peer group pl-0.5 pr-3 py-2 flex gap-x-1 items-center focus:outline-none min-w-max [&>*]:flex-shrink-0",
-						active
+						selected
 							? "bg-[#4A5878]"
 							: " hover:!outline  hover:!outline-1 hover:!-outline-offset-1 hover:!outline-[#0C8CE9]"
 					)}
@@ -78,18 +104,18 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 					<button
 						onPointerDown={(e) => {
 							e.stopPropagation()
-							setExpanded(!expanded)
+							setIsNodeExpanded(!isNodeExpanded)
 						}}
 						style={{
 							marginLeft: `${padding}rem`,
 						}}
-						disabled={children.length === 0}
+						disabled={entityChildren.length === 0}
 						className="disabled:invisible"
 					>
 						<RxTriangleRight
 							className={cn(
 								"transition-transform duration-150 text-[#787878]  opacity-[var(--show-ui)]",
-								expanded ? "rotate-90" : ""
+								isNodeExpanded ? "rotate-90" : ""
 							)}
 						/>
 					</button>
@@ -98,7 +124,7 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 						<InterfaceIcon
 							fontSize={"1rem"}
 							className={cn(
-								hidden || parentHidden || !active ? "text-[#787878]" : "text-white",
+								isEntityVisible || parentHidden || !selected ? "text-[#787878]" : "text-white",
 								"w-4 h-4"
 							)}
 						/>
@@ -108,7 +134,7 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 								// root ? "font-semibold " : "font-normal"
 							)}
 						>
-							{entityInfo.name}
+							{entityName}
 						</span>
 					</div>
 
@@ -116,17 +142,21 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 						<button
 							onPointerDown={(e) => {
 								e.stopPropagation()
-								setHidden(!hidden)
+								setIsEntityVisible(!isEntityVisible)
 							}}
 						>
-							{hidden ? <GoEyeClosed fontSize={"0.85rem"} /> : <GoEye fontSize={"0.85rem"} />}
+							{isEntityVisible ? (
+								<GoEyeClosed fontSize={"0.85rem"} />
+							) : (
+								<GoEye fontSize={"0.85rem"} />
+							)}
 						</button>
 					</div>
 				</ContextMenuTrigger>
 				<ContextMenuContent className="w-64 bg-[#1E1E1E] border-[#2C2C2C]">
 					<ContextMenuItem
 						onClick={() => {
-							instance.entitiesRemoveEntity(entityID)
+							removeEntity(entityID)
 						}}
 					>
 						Delete
@@ -145,14 +175,14 @@ export function EntityNode({ root, padding, entityID, parentHidden }: EntityNode
 				</ContextMenuContent>
 			</ContextMenu>
 
-			{expanded && (
-				<ul className={`${active ? "bg-[#394360]" : ""}`}>
-					{children.map((child) => (
+			{isNodeExpanded && (
+				<ul className={`${selected ? "bg-[#394360]" : ""}`}>
+					{entityChildren.map((child) => (
 						<EntityNode
 							key={child}
 							padding={padding + 1.2}
 							entityID={child}
-							parentHidden={parentHidden || hidden}
+							parentHidden={parentHidden || isEntityVisible}
 						/>
 					))}
 				</ul>

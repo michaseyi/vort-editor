@@ -1,28 +1,31 @@
 import { usePointerCapture } from "@/hooks/usePointerCapture"
+import { OrientationGizmoData, Vec3 } from "@/lib/editor/types"
+import { useEditorControls } from "@/lib/editor/useEditorControls"
+import { useSceneRenderTargetCameraOrientationGizmoData } from "@/lib/editor/useSceneRenderTargetCameraOrientationGizmoData"
 import { cn } from "@/lib/utils"
-import { ViewGizmoData, useInstance } from "@/lib/ecs-connector"
+
 import { HTMLAttributes, forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 
-type ViewGizmosAxisDirection = "X" | "-X" | "Y" | "-Y" | "Z" | "-Z"
+type ViewGizmosAxisDirection = "x" | "-x" | "y" | "-y" | "z" | "-z"
 
 const ViewGizmosAxisColorMap: Map<ViewGizmosAxisDirection, string> = new Map([
-	["X", "#E3342F"],
-	["-X", "#E3342F"],
-	["Y", "#38C172"],
-	["-Y", "#38C172"],
-	["Z", "#1678c8"],
-	["-Z", "#1678c8"],
+	["x", "#E3342F"],
+	["-x", "#E3342F"],
+	["y", "#38C172"],
+	["-y", "#38C172"],
+	["z", "#1678c8"],
+	["-z", "#1678c8"],
 ])
 
 interface ViewGizmosAxisProps {
 	axis: ViewGizmosAxisDirection
 	active?: boolean
-	position: [number, number, number]
+	position: Vec3
 	jumpToAxis: (axis: ViewGizmosAxisDirection) => void
 }
 
 export function ViewGizmosAxis({ axis, position, jumpToAxis }: ViewGizmosAxisProps) {
-	const [xPos, yPos, depth] = position
+	const { x, y, z } = position
 
 	const isNegative = axis.length === 2
 
@@ -34,27 +37,27 @@ export function ViewGizmosAxis({ axis, position, jumpToAxis }: ViewGizmosAxisPro
 			style={{
 				background: isNegative ? undefined : ViewGizmosAxisColorMap.get(axis),
 				borderColor: isNegative ? ViewGizmosAxisColorMap.get(axis) : undefined,
-				top: `${yPos * 100}%`,
-				left: `${xPos * 100}%`,
+				top: `${y * 100}%`,
+				left: `${x * 100}%`,
 				transform: "translate(-50%, -50%)",
-				zIndex: `${Math.round(depth * 5 + 10)}`,
+				zIndex: `${Math.round(z * 5 + 10)}`,
 			}}
 			className={cn(
-				"absolute text-[0.7rem] font-bold  w-4 h-4 rounded-full  grid place-items-center hover:text-white hover:font-extrabold transition-colors",
+				"absolute text-[0.7rem] font-bold  w-3.5 h-3.5 rounded-full  grid place-items-center hover:text-white hover:font-extrabold transition-colors",
 				isNegative ? "border-[1.5px] bg-[rgb(80,80,80)] text-transparent" : "text-[#1A1A1A]"
 			)}
 		>
-			{axis}
+			{/* {axis} */}
 		</button>
 	)
 }
 
 interface ViewGizmosAxisLinesProps {
-	positions: ViewGizmoData
+	positions: OrientationGizmoData
 }
 
 export function ViewGizmosAxisLines({ positions }: ViewGizmosAxisLinesProps) {
-	const axes: ViewGizmosAxisDirection[] = ["X", "Y", "Z"]
+	const axes: ViewGizmosAxisDirection[] = ["x", "y", "z"]
 
 	return (
 		<>
@@ -62,14 +65,14 @@ export function ViewGizmosAxisLines({ positions }: ViewGizmosAxisLinesProps) {
 				<svg
 					key={idx}
 					style={{
-						zIndex: `${Math.round(positions[axis][2] * 5 + 10)}`,
+						zIndex: `${Math.round(positions[axis].z * 5 + 10)}`,
 					}}
 					viewBox="0 0 100 100"
 					className="absolute top-0 left-0 w-full h-full"
 				>
 					<path
 						key={axis}
-						d={`M${positions[axis][0] * 100} ${positions[axis][1] * 100} L50 50`}
+						d={`M${positions[axis].x * 100} ${positions[axis].y * 100} L50 50`}
 						strokeWidth="3"
 						stroke={ViewGizmosAxisColorMap.get(axis)}
 					></path>
@@ -83,22 +86,18 @@ interface ViewGizmosProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function ViewGizmos({ className, canvasSelectorPtr }: ViewGizmosProps) {
-	// request editor veiw object
-	const instance = useInstance()
-	const axes: ViewGizmosAxisDirection[] = ["-X", "-Y", "-Z", "X", "Y", "Z"]
+	const axes: ViewGizmosAxisDirection[] = ["-x", "-y", "-z", "x", "y", "z"]
 
-	const [positions, setPositions] = useState<ViewGizmoData>(() =>
-		instance.editorGetViewGizmoData(canvasSelectorPtr)
-	)
+	const positions = useSceneRenderTargetCameraOrientationGizmoData(canvasSelectorPtr)
+
+	const { rotateSceneRenderTargetCamera } = useEditorControls()
 
 	function jumpToAxis(axis: ViewGizmosAxisDirection) {
-		// rotate editor view to axis
 		console.log("setting view to", axis)
 	}
 
 	const ref = usePointerCapture<HTMLDivElement>((movementX, movementY) => {
-		instance.editorRotateCamera(canvasSelectorPtr, -movementY, -movementX)
-		setPositions(instance.editorGetViewGizmoData(canvasSelectorPtr))
+		rotateSceneRenderTargetCamera(canvasSelectorPtr, -movementY, -movementX)
 	})
 
 	return (
@@ -106,8 +105,8 @@ export function ViewGizmos({ className, canvasSelectorPtr }: ViewGizmosProps) {
 			ref={ref}
 			className={cn(
 				className,
-				// "select-none  w-14 h-14 rounded-full transition-[box-shadow,background-color] relative"
-				"select-none hover:bg-gray-400/50 hover:shadow-extend shadow-gray-400/50 w-14 h-14 rounded-full transition-[box-shadow,background-color] relative"
+				"select-none  w-14 h-14 rounded-full transition-[box-shadow,background-color] relative"
+				// "select-none hover:bg-gray-400/50 hover:shadow-extend shadow-gray-400/50 w-14 h-14 rounded-full transition-[box-shadow,background-color] relative"
 			)}
 		>
 			<ViewGizmosAxisLines positions={positions} />

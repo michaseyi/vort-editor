@@ -1,24 +1,18 @@
 import { TabBody, TabHeader, TabHeaderLeft } from "@/components/Tab"
 import { RefreshCcw } from "lucide-react"
 
-import { RootEntity, useEntityChildren, useInstance } from "@/lib/ecs-connector"
 import { EntityNode } from "@/components/EntityNode"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useState } from "react"
 import { Button } from "@/components/Button"
+import { useEntityChildren } from "@/lib/editor/useEntityChildren"
 
 export function SceneGraph() {
-	const instance = useInstance()
-
-	const [rootEntities, setRootEntities] = useState(() => {
-		return instance.entityGetChildren(RootEntity)
-	})
+	const rootEntities = useEntityChildren(0)
 
 	return (
-		<section className="h-full flex flex-col">
-			<TabHeader tabName="Scene Graph">
-				
-			</TabHeader>
+		<section className="h-full flex flex-col rounded-lg overflow-hidden">
+			<TabHeader tabName="Scene Graph"></TabHeader>
 			<TabBody>
 				<ScrollArea
 					onPointerEnter={(e) => {

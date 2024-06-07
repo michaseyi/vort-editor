@@ -15,6 +15,9 @@ import { Timeline } from "@/tabs/Timeline"
 import { Properties } from "@/tabs/Properties"
 import { Viewport } from "@/tabs/Viewport"
 import { SceneGraph } from "@/tabs/SceneGraph"
+import clsx from "clsx"
+import { FaChevronDown } from "react-icons/fa6"
+import { NumericInput } from "./NumericInput"
 
 type TabType =
 	| "Properties"
@@ -162,8 +165,13 @@ export function TabHeader({ children, tabName }: TabHeaderProps) {
 	}, [children])
 
 	return (
-		<Menubar>
-			<ul className="flex [&>*]:flex-1 bg-[rgb(55,55,55)] py-1 px-2 rounded-t-lg text-white overflow-hidden flex-shrink-0">
+		<Menubar className={cn(tabName == "3D Viewport" ? "absolute top-0 left-0 w-full  z-10" : "")}>
+			<ul
+				className={cn(
+					"flex [&>*]:flex-1  py-1 px-1  text-white overflow-hidden flex-shrink-0 bg-[rgb(55,55,55)]",
+					tabName == "3D Viewport" && "bg-[rgba(55,55,55,0.7)]"
+				)}
+			>
 				<li className="flex gap-x-1 items-center ">
 					<MenubarMenu>
 						<MenubarTrigger className="outline-button data-[state=open]:bg-[rgb(71,106,194)]  data-[state=open]:border-[rgb(71,106,194)]">
@@ -211,12 +219,20 @@ export function TabHeader({ children, tabName }: TabHeaderProps) {
 				<li className="flex justify-center px-1">{middleComponent && middleComponent}</li>
 				<li className="flex gap-x-[1px] justify-end">{rightComponent && rightComponent}</li>
 			</ul>
+
+		
 		</Menubar>
 	)
 }
 
-export function TabBody({ children }: { children?: React.ReactNode }) {
-	return <div className="overflow-hidden rounded-b-lg flex-1 bg-[#2c2c2c] ">{children}</div>
+export function TabBody({
+	children,
+	className,
+}: {
+	children?: React.ReactNode
+	className?: string
+}) {
+	return <div className={cn("overflow-hidden  flex-1 bg-[#2c2c2c] ", className)}>{children}</div>
 }
 
 type TabContextData = {
