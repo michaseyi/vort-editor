@@ -11,6 +11,7 @@ import { useEntityComponent } from "@/lib/editor/useEntityComponent"
 import { ComponentType } from "@/lib/editor/types"
 import { Key, KeyProvider, KeyState, isPressed, isReleased, useKeys } from "@/lib/editor/keyStore"
 import { useEditorControls } from "@/lib/editor/useEditorControls"
+import Image from "next/image"
 
 export default function Wrapper() {
 	return (
@@ -66,7 +67,8 @@ function Editor() {
 
 			{!isInitialized && (
 				<div className="h-screen flex flex-col gap-y-1 justify-center items-center bg-[#2c2c2c]">
-					<span className="text-white/70 text-sm">{initializationStage}</span>
+					{/* <span className="text-white/70 text-sm">{initializationStage}</span> */}
+					<img fetchPriority="high" alt="Objects" className="w-10 h-10" src="icon2.png" />
 					<div className="w-48 h-1 rounded-l-full rounded-r-full bg-white/40 overflow-hidden">
 						<div className="h-full animate-width bg-white/70"></div>
 					</div>
@@ -106,7 +108,6 @@ function EditorPage() {
 function KeyBoardShortcuts() {
 	const keys = useKeys()
 
-	const shift = keys.use.Shift()
 	const x = keys.use.KeyX()
 
 	const editorStore = useEditorStore()
@@ -116,11 +117,11 @@ function KeyBoardShortcuts() {
 	const { removeEntity } = useEditorControls()
 
 	useEffect(() => {
-		if (isPressed(shift) && isPressed(x) && lastSelectedEntity) {
+		if (isPressed(x) && lastSelectedEntity) {
 			removeEntity(lastSelectedEntity)
 			return
 		}
-	}, [shift, x])
+	}, [x])
 
 	return <></>
 }

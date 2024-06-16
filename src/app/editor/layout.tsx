@@ -10,7 +10,7 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
 	title: "Untitled project - Vort",
-	icons: { icon: "/icon.png" },
+	icons: { icon: "/icon2.png" },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
